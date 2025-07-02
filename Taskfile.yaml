@@ -1,0 +1,22 @@
+version: '3'
+
+set:
+  - errexit
+  - nounset
+  - pipefail
+
+includes:
+  kind: tasks/kind.yaml
+  kcp: tasks/kcp.yaml
+
+tasks:
+  run-demo:
+    desc: Run the demo
+    cmds:
+      - task: kind:create
+      - task: kcp:deploy
+
+  cleanup:
+    desc: Cleanup the demo environment
+    cmds:
+      - task: kind:delete

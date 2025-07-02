@@ -1,0 +1,27 @@
+fullnameOverride: proxy
+externalHostname: "kcp.127.0.0.1.sslip.io"
+externalPort: 8443
+etcd:
+  enabled: false
+kcp:
+  enabled: false
+kcpFrontProxy:
+  tag: v0.27.1
+  enabled: true
+  gateway:
+    enabled: true
+    className: ""
+  tokenAuth:
+    enabled: true
+cache:
+  enabled: false
+certificates:
+  name: certs
+sharding:
+  enabled: false
+  isRoot: true # set this to true for the first (root) shard, false for all other shards.
+  rootShardInternalHostname: "alpha.kcp-alpha.svc.cluster.local"
+caBundle:
+  enabled: false
+  configMapName: kcp.dev.local
+  configMapKey: root-certs.pem

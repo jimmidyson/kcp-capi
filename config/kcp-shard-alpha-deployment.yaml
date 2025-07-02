@@ -1,0 +1,24 @@
+fullnameOverride: alpha
+externalHostname: "kcp.127.0.0.1.sslip.io"
+externalPort: 8443
+etcd:
+  enabled: true
+kcp:
+  externalLogicalClusterAdminFlag: true
+  tag: v0.27.1
+  enabled: true
+  tokenAuth:
+    enabled: true
+  batteries:
+    - workspace-types
+    - metrics-viewer
+  extraFlags:
+  - --feature-gates=WorkspaceMounts=true
+  homeWorkspaces:
+    enabled: true
+externalCache:
+  enabled: true
+  cacheInternalHostname: "cache-cache.kcp-cache.svc"
+sharding:
+  enabled: true
+  isRoot: true

@@ -1,0 +1,13 @@
+{
+  "yaml.schemas": {
+    "https://taskfile.dev/schema.json": [
+      "tasks/git.yaml",
+      "tasks/build.yaml",
+      "tasks/go.yaml",
+      "tasks/pre-commit.yaml",
+      "tasks/test.yaml",
+      "file:///Users/jimmi.dyson/go/src/github.com/jimmidyson/kcp-capi/tasks/kind.yaml",
+      "file:///Users/jimmi.dyson/go/src/github.com/jimmidyson/kcp-capi/tasks/kcp.yaml"
+    ]
+  }
+}

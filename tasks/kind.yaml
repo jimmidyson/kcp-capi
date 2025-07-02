@@ -1,0 +1,48 @@
+# Copyright 2025 Nutanix. All rights reserved.
+# SPDX-License-Identifier: Apache-2.0
+
+version: '3'
+
+vars:
+  KIND_CLUSTER_NAME: kcp-capi
+
+tasks:
+  create:
+    desc: Ensure KinD cluster is running
+    cmds:
+      - task: create-kind
+      - task: deploy-cilium
+
+  create-kind:
+    internal: true
+    cmds:
+      - kind create cluster --name '{{.KIND_CLUSTER_NAME}}'
+        --image 'ghcr.io/mesosphere/kind-node:{{.K8S_VERSION}}' --config config/kind-config.yaml
+    status:
+      - kind get clusters | grep -q '^{{.KIND_CLUSTER_NAME}}$'
+    vars:
+      K8S_VERSION:
+        sh: crane ls ghcr.io/mesosphere/kind-node | grep -v 64 | sort -rV | head -1
+
+  deploy-gateway-api-crds:
+    internal: true
+    cmds:
+      - kubectl apply --server-side
+        -f https://github.com/kubernetes-sigs/gateway-api/releases/download/v1.3.0/experimental-install.yaml
+
+  deploy-cilium:
+    internal: true
+    deps:
+      - deploy-gateway-api-crds
+    cmds:
+      - helm upgrade --install cilium cilium --repo https://helm.cilium.io --values config/cilium-values.yaml
+        --namespace kube-system --create-namespace --wait --wait-for-jobs
+      - kubectl apply --server-side -f config/hubble-ui-gateway.yaml
+
+  delete:
+    desc: Delete KinD cluster
+    cmds:
+      - kind delete cluster --name '{{.KIND_CLUSTER_NAME}}'
+      - rm -f "${KUBECONFIG}"
+    preconditions:
+      - kind get clusters | grep -q '^{{.KIND_CLUSTER_NAME}}$'

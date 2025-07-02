@@ -1,0 +1,27 @@
+k8sServiceHost: kcp-capi-control-plane
+k8sServicePort: 6443
+kubeProxyReplacement: true
+hostServices:
+  enabled: false
+externalIPs:
+  enabled: true
+nodePort:
+  enabled: true
+hostPort:
+  enabled: true
+gatewayAPI:
+  enabled: true
+  hostNetwork:
+    enabled: true
+image:
+  pullPolicy: IfNotPresent
+ipam:
+  mode: kubernetes
+operator:
+  replicas: 1
+hubble:
+  enabled: true
+  relay:
+    enabled: true
+  ui:
+    enabled: true

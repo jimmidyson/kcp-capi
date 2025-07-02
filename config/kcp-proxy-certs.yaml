@@ -1,0 +1,26 @@
+fullnameOverride: proxy
+externalHostname: "kcp.127.0.0.1.sslip.io"
+externalPort: 8443
+certificates:
+  dnsNames:
+  - localhost
+  - kcp.127.0.0.1.sslip.io
+  kcp:
+    pki: false
+    certs: false
+  frontproxy:
+    pki: false
+    certs: true
+  etcd:
+    pki: false
+    certs: true
+  cache:
+    pki: false
+    certs: false
+  secretTemplate:
+    enabled: true
+    annotations:
+      reflector.v1.k8s.emberstack.com/reflection-allowed: "true"
+      reflector.v1.k8s.emberstack.com/reflection-allowed-namespaces: "kcp-alpha,kcp-beta,kcp-proxy,kcp-cache,idp"
+      reflector.v1.k8s.emberstack.com/reflection-auto-enabled: "true"
+      reflector.v1.k8s.emberstack.com/reflection-auto-namespaces: "kcp-alpha,kcp-beta,kcp-proxy,kcp-cache,idp"

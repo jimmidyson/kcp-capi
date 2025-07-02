@@ -1,0 +1,6 @@
+fullnameOverride: cache
+externalHostname: "kcp.127.0.0.1.sslip.io"
+externalPort: 8443
+cache:
+  enabled: true
+  v: 8

@@ -1,0 +1,28 @@
+fullnameOverride: beta
+externalHostname: "kcp.127.0.0.1.sslip.io"
+externalPort: 8443
+etcd:
+  enabled: true
+kcp:
+  tag: v0.27.1
+  enabled: true
+  tokenAuth:
+    enabled: true
+  batteries:
+    - workspace-types
+    - metrics-viewer
+  extraFlags:
+  - --feature-gates=WorkspaceMounts=true
+  homeWorkspaces:
+    enabled: true
+externalCache:
+  enabled: true
+  cacheInternalHostname: "cache-cache.kcp-cache.svc"
+sharding:
+  enabled: true
+  isRoot: false # set this to true for the first (root) shard, false for all other shards.
+  rootShardInternalHostname: "alpha.kcp-alpha.svc.cluster.local"
+caBundle:
+  enabled: false
+  configMapName: kcp.dev.local
+  configMapKey: root-certs.pem

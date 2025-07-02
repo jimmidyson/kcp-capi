@@ -1,0 +1,21 @@
+kind: Cluster
+apiVersion: kind.x-k8s.io/v1alpha4
+networking:
+  disableDefaultCNI: true
+  kubeProxyMode: none
+nodes:
+- role: control-plane
+  extraMounts:
+  - hostPath: /var/run/docker.sock
+    containerPath: /var/run/docker.sock
+- role: worker
+  extraMounts:
+  - hostPath: /var/run/docker.sock
+    containerPath: /var/run/docker.sock
+  extraPortMappings:
+  - containerPort: 8080
+    hostPort: 8080
+    listenAddress: "0.0.0.0"
+  - containerPort: 8443
+    hostPort: 8443
+    listenAddress: "0.0.0.0"
