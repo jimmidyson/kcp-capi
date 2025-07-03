@@ -4,80 +4,143 @@ tasks:
   deploy:
     desc: Deploy KCP
     cmds:
-      - task: deploy-reflector
-      - task: deploy-pki
-      - task: deploy-cache
       - task: deploy-shard-alpha
       - task: deploy-proxy
       - task: deploy-shard-beta
 
   deploy-pki:
     desc: Deploy KCP PKI
+    run: once
     cmds:
-      - task: deploy-cert-manager
-      - helm upgrade --install kcp-pki certificates --repo https://kcp-dev.github.io/helm-charts
-        --namespace kcp-system --create-namespace
-        --values config/kcp-pki-values.yaml
-        --wait --wait-for-jobs
+      - helm upgrade --install kcp-pki ./charts/certificates
+          --namespace=kcp-system --create-namespace
+          --values=config/kcp-pki-values.yaml
+          --wait --wait-for-jobs
+          --hide-notes
+    sources:
+      - config/kcp-pki-values.yaml
+    status:
+      - "helm status --namespace=kcp-system kcp-pki | grep --quiet '^STATUS: deployed$'"
 
   deploy-cache:
     desc: Deploy KCP cache
+    run: once
+    deps:
+      - deploy-cache-certs
     cmds:
-      - helm upgrade --install kcp-cache-certs certificates --repo https://kcp-dev.github.io/helm-charts
-        --namespace kcp-system --create-namespace
-        --values config/kcp-cache-certs.yaml
-        --wait --wait-for-jobs
-      - helm upgrade --install kcp-cache cache --repo https://kcp-dev.github.io/helm-charts
-        --namespace kcp-cache --create-namespace
-        --values config/kcp-cache-deployment.yaml
-        --wait --wait-for-jobs
+      - helm upgrade --install kcp-cache ./charts/cache
+          --namespace=kcp-cache --create-namespace
+          --values=config/kcp-cache-deployment.yaml
+          --wait --wait-for-jobs
+          --hide-notes
+    sources:
+      - config/kcp-cache-deployment.yaml
+    status:
+      - "helm status --namespace=kcp-cache kcp-cache | grep --quiet '^STATUS: deployed$'"
+
+  deploy-cache-certs:
+    internal: true
+    deps:
+      - deploy-pki
+    cmds:
+      - helm upgrade --install kcp-cache-certs certificates --repo=https://kcp-dev.github.io/helm-charts
+          --namespace=kcp-system --create-namespace
+          --values=config/kcp-cache-certs.yaml
+          --wait --wait-for-jobs
+          --hide-notes
+    sources:
+      - config/kcp-cache-certs.yaml
+    status:
+      - "helm status --namespace=kcp-system kcp-cache-certs | grep --quiet '^STATUS: deployed$'"
 
   deploy-shard-alpha:
     desc: Deploy KCP shard alpha
+    deps:
+      - deploy-shard-alpha-certs
+      - deploy-cache
     cmds:
-      - helm upgrade --install kcp-shard-alpha-certs certificates --repo https://kcp-dev.github.io/helm-charts
-        --namespace kcp-system --create-namespace
-        --values config/kcp-shard-alpha-certs.yaml
-        --wait --wait-for-jobs
-      - helm upgrade --install kcp-shard-alpha shard --repo https://kcp-dev.github.io/helm-charts
-        --namespace kcp-alpha --create-namespace
-        --values config/kcp-shard-alpha-deployment.yaml
-        --wait --wait-for-jobs
+      - helm upgrade --install kcp-shard-alpha shard --repo=https://kcp-dev.github.io/helm-charts
+          --namespace=kcp-alpha --create-namespace
+          --values=config/kcp-shard-alpha-deployment.yaml
+          --wait --wait-for-jobs
+          --hide-notes
+    sources:
+      - config/kcp-shard-alpha-deployment.yaml
+    status:
+      - "helm status --namespace=kcp-alpha kcp-shard-alpha | grep --quiet '^STATUS: deployed$'"
+
+  deploy-shard-alpha-certs:
+    internal: true
+    deps:
+      - deploy-pki
+    cmds:
+      - helm upgrade --install kcp-shard-alpha-certs certificates --repo=https://kcp-dev.github.io/helm-charts
+          --namespace=kcp-system --create-namespace
+          --values=config/kcp-shard-alpha-certs.yaml
+          --wait --wait-for-jobs
+          --hide-notes
+    sources:
+      - config/kcp-shard-alpha-certs.yaml
+    status:
+      - "helm status --namespace=kcp-system kcp-shard-alpha-certs | grep --quiet '^STATUS: deployed$'"
 
   deploy-proxy:
     desc: Deploy KCP proxy
+    deps:
+      - deploy-proxy-certs
     cmds:
-      - helm upgrade --install kcp-proxy-certs certificates --repo https://kcp-dev.github.io/helm-charts
-        --namespace kcp-system --create-namespace
-        --values config/kcp-proxy-certs.yaml
-        --wait --wait-for-jobs
-      - helm upgrade --install kcp-proxy proxy
-        --namespace kcp-proxy --create-namespace
-        --values config/kcp-proxy-deployment.yaml
-        --wait --wait-for-jobs
+      - helm upgrade --install kcp-proxy proxy --repo=https://kcp-dev.github.io/helm-charts
+          --namespace=kcp-proxy --create-namespace
+          --values=config/kcp-proxy-deployment.yaml
+          --wait --wait-for-jobs
+          --hide-notes
+    sources:
+      - config/kcp-proxy-deployment.yaml
+    status:
+      - "helm status --namespace=kcp-proxy kcp-proxy | grep --quiet '^STATUS: deployed$'"
+
+  deploy-proxy-certs:
+    internal: true
+    deps:
+      - deploy-pki
+    cmds:
+      - helm upgrade --install kcp-proxy-certs certificates --repo=https://kcp-dev.github.io/helm-charts
+          --namespace=kcp-system --create-namespace
+          --values=config/kcp-proxy-certs.yaml
+          --wait --wait-for-jobs
+          --hide-notes
+    sources:
+      - config/kcp-proxy-certs.yaml
+    status:
+      - "helm status --namespace=kcp-system kcp-proxy-certs | grep --quiet '^STATUS: deployed$'"
 
   deploy-shard-beta:
+    desc: Deploy KCP shard beta
+    deps:
+      - deploy-shard-beta-certs
+      - deploy-cache
     cmds:
-      - helm upgrade --install kcp-shard-beta-certs certificates --repo https://kcp-dev.github.io/helm-charts
-        --namespace kcp-system --create-namespace
-        --values config/kcp-shard-beta-certs.yaml
-        --wait --wait-for-jobs
-      - helm upgrade --install kcp-shard-beta shard --repo https://kcp-dev.github.io/helm-charts
-        --namespace kcp-beta --create-namespace
-        --values config/kcp-shard-beta-deployment.yaml
-        --wait --wait-for-jobs
-
-  deploy-cert-manager:
-    internal: true
-    cmds:
-      - helm upgrade --install cert-manager cert-manager --repo https://charts.jetstack.io
-        --namespace cert-manager --create-namespace
-        --set crds.enabled=true
-        --wait --wait-for-jobs
-
-  deploy-reflector:
-    internal: true
-    cmds:
-      - helm upgrade --install reflector reflector --repo https://emberstack.github.io/helm-charts
-          --namespace reflector --create-namespace
+      - helm upgrade --install kcp-shard-beta shard --repo=https://kcp-dev.github.io/helm-charts
+          --namespace=kcp-beta --create-namespace
+          --values=config/kcp-shard-beta-deployment.yaml
           --wait --wait-for-jobs
+          --hide-notes
+    sources:
+      - config/kcp-shard-beta-deployment.yaml
+    status:
+      - "helm status --namespace=kcp-beta kcp-shard-beta | grep --quiet '^STATUS: deployed$'"
+
+  deploy-shard-beta-certs:
+    internal: true
+    deps:
+      - deploy-pki
+    cmds:
+      - helm upgrade --install kcp-shard-beta-certs certificates --repo=https://kcp-dev.github.io/helm-charts
+          --namespace=kcp-system --create-namespace
+          --values=config/kcp-shard-beta-certs.yaml
+          --wait --wait-for-jobs
+          --hide-notes
+    sources:
+      - config/kcp-shard-beta-certs.yaml
+    status:
+      - "helm status --namespace=kcp-system kcp-shard-beta-certs | grep --quiet '^STATUS: deployed$'"

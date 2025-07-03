@@ -6,14 +6,18 @@ set:
   - pipefail
 
 includes:
-  kind: tasks/kind.yaml
+  cert-manager: tasks/cert-manager.yaml
   kcp: tasks/kcp.yaml
+  kind: tasks/kind.yaml
+  reflector: tasks/reflector.yaml
 
 tasks:
   run-demo:
     desc: Run the demo
     cmds:
       - task: kind:create
+      - task: cert-manager:deploy
+      - task: reflector:deploy
       - task: kcp:deploy
 
   cleanup:

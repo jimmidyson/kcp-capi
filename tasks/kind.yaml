@@ -15,34 +15,48 @@ tasks:
 
   create-kind:
     internal: true
-    cmds:
-      - kind create cluster --name '{{.KIND_CLUSTER_NAME}}'
-        --image 'ghcr.io/mesosphere/kind-node:{{.K8S_VERSION}}' --config config/kind-config.yaml
-    status:
-      - kind get clusters | grep -q '^{{.KIND_CLUSTER_NAME}}$'
+    run: once
     vars:
       K8S_VERSION:
-        sh: crane ls ghcr.io/mesosphere/kind-node | grep -v 64 | sort -rV | head -1
+        sh: crane ls ghcr.io/mesosphere/kind-node | grep --invert-match 64 | sort --reverse --version-sort | head -1
+    cmds:
+      - kind create cluster --name '{{.KIND_CLUSTER_NAME}}'
+        --image 'ghcr.io/mesosphere/kind-node:{{.K8S_VERSION}}' --config=config/kind-config.yaml
+    status:
+      - kind get clusters | grep --quiet '^{{.KIND_CLUSTER_NAME}}$'
 
   deploy-gateway-api-crds:
     internal: true
+    run: once
     cmds:
       - kubectl apply --server-side
-        -f https://github.com/kubernetes-sigs/gateway-api/releases/download/v1.3.0/experimental-install.yaml
+          --filename=https://github.com/kubernetes-sigs/gateway-api/releases/download/v1.3.0/experimental-install.yaml
+    status:
+      - kubectl get
+          --filename=https://github.com/kubernetes-sigs/gateway-api/releases/download/v1.3.0/experimental-install.yaml &>/dev/null
 
   deploy-cilium:
     internal: true
+    run: once
     deps:
       - deploy-gateway-api-crds
     cmds:
-      - helm upgrade --install cilium cilium --repo https://helm.cilium.io --values config/cilium-values.yaml
-        --namespace kube-system --create-namespace --wait --wait-for-jobs
-      - kubectl apply --server-side -f config/hubble-ui-gateway.yaml
+      - helm upgrade --install cilium cilium --repo=https://helm.cilium.io
+          --namespace=kube-system --create-namespace
+          --values=config/cilium-values.yaml
+          --wait --wait-for-jobs
+          --hide-notes
+      - kubectl apply --server-side --filename=config/hubble-ui-gateway.yaml
+    sources:
+      - config/cilium-values.yaml
+    status:
+      - "helm status --namespace=kube-system cilium | grep --quiet '^STATUS: deployed$'"
+      - kubectl get --filename=config/hubble-ui-gateway.yaml &>/dev/null
 
   delete:
     desc: Delete KinD cluster
     cmds:
       - kind delete cluster --name '{{.KIND_CLUSTER_NAME}}'
-      - rm -f "${KUBECONFIG}"
+      - rm --force "${KUBECONFIG}"
     preconditions:
-      - kind get clusters | grep -q '^{{.KIND_CLUSTER_NAME}}$'
+      - kind get clusters | grep --quiet '^{{.KIND_CLUSTER_NAME}}$'

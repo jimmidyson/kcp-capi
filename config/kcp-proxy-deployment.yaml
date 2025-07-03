@@ -6,13 +6,23 @@ etcd:
 kcp:
   enabled: false
 kcpFrontProxy:
-  tag: v0.27.1
   enabled: true
+  tag: v0.27.1
+  v: 8
   gateway:
     enabled: true
-    className: ""
+    className: "cilium"
   tokenAuth:
     enabled: true
+  service:
+    clusterIP: "10.96.0.100"
+  resources: null
+  hostAliases:
+    enabled: true
+    values:
+      - ip: "10.96.0.100"
+        hostnames:
+          - "kcp.127.0.0.1.sslip.io"
 cache:
   enabled: false
 certificates:
@@ -21,7 +31,3 @@ sharding:
   enabled: false
   isRoot: true # set this to true for the first (root) shard, false for all other shards.
   rootShardInternalHostname: "alpha.kcp-alpha.svc.cluster.local"
-caBundle:
-  enabled: false
-  configMapName: kcp.dev.local
-  configMapKey: root-certs.pem

@@ -1,0 +1,11 @@
+version: 3
+
+tasks:
+  deploy:
+    cmds:
+      - helm upgrade --install reflector reflector --repo=https://emberstack.github.io/helm-charts
+          --namespace=reflector --create-namespace
+          --wait --wait-for-jobs
+          --hide-notes
+    status:
+      - "helm status --namespace=reflector reflector | grep --quiet '^STATUS: deployed$'"

@@ -1,0 +1,14 @@
+version: 3
+
+tasks:
+  deploy:
+    cmds:
+      - helm upgrade --install cert-manager cert-manager --repo=https://charts.jetstack.io
+          --namespace=cert-manager --create-namespace
+          --values=config/cert-manager-values.yaml
+          --wait --wait-for-jobs
+          --hide-notes
+    sources:
+      - config/cert-manager-values.yaml
+    status:
+      - "helm status --namespace=cert-manager cert-manager | grep --quiet '^STATUS: deployed$'"
