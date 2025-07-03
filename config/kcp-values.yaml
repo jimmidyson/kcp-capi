@@ -1,0 +1,27 @@
+externalHostname: "kcp.127.0.0.1.sslip.io"
+externalPort: "8443"
+etcd:
+  resources:
+    requests:
+      memory: 256Mi
+certificates:
+  dnsNames:
+    - localhost
+    - kcp.127.0.0.1.sslip.io
+kcp:
+  # tag is set via --set flag to make it more dynamic for testing purposes
+  volumeClassName: "standard"
+  tokenAuth:
+    enabled: true
+  hostAliases:
+    enabled: true
+    values:
+      - ip: "10.96.0.100"
+        hostnames:
+          - "kcp.127.0.0.1.sslip.io"
+kcpFrontProxy:
+  service:
+    clusterIP: "10.96.0.100"
+  gateway:
+    enabled: true
+    className: "cilium"
