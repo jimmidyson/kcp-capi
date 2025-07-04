@@ -19,6 +19,8 @@ kcp:
       - ip: "10.96.0.100"
         hostnames:
           - "kcp.127.0.0.1.sslip.io"
+  homeWorkspaces:
+    enabled: true
 kcpFrontProxy:
   service:
     clusterIP: "10.96.0.100"

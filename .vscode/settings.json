@@ -6,10 +6,11 @@
       "tasks/go.yaml",
       "tasks/pre-commit.yaml",
       "tasks/test.yaml",
-      "file:///Users/jimmi.dyson/go/src/github.com/jimmidyson/kcp-capi/tasks/kind.yaml",
-      "file:///Users/jimmi.dyson/go/src/github.com/jimmidyson/kcp-capi/tasks/kcp.yaml",
-      "file:///Users/jimmi.dyson/go/src/github.com/jimmidyson/kcp-capi/tasks/cert-manager.yaml",
-      "file:///Users/jimmi.dyson/go/src/github.com/jimmidyson/kcp-capi/tasks/reflector.yaml"
+      "tasks/kind.yaml",
+      "tasks/kcp.yaml",
+      "tasks/cert-manager.yaml",
+      "tasks/reflector.yaml",
+      "tasks/apis.yaml"
     ]
   }
 }

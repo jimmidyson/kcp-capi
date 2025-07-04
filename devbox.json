@@ -4,8 +4,12 @@
     "crane@latest",
     "envsubst@latest",
     "go-task@latest",
-    "gojq@latest",
     "kind@latest",
-    "kubernetes-helm@latest"
+    "kubectl@latest",
+    "kubernetes-helm@latest",
+    "kustomize@latest",
+    "yq-go@latest",
+    "path:flakes#kcp-apigen",
+    "path:flakes#kubectl-kcp"
   ]
 }

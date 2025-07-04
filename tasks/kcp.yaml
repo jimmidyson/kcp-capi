@@ -23,7 +23,7 @@ tasks:
     desc: Generate KCP admin kubeconfig
     env:
       external_hostname:
-        sh: helm get values -n kcp kcp -o yaml | gojq --yaml-input --raw-output '.externalHostname'
+        sh: helm get values -n kcp kcp -o yaml | yq '.externalHostname'
     cmds:
       - envsubst --no-unset --no-digit --no-empty -i config/kcp-admin-kubeconfig.tmpl -o kcp-admin.kubeconfig
     sources:
@@ -32,3 +32,59 @@ tasks:
       - kcp-admin.kubeconfig
     preconditions:
       - "helm status --namespace=kcp kcp | grep --quiet '^STATUS: deployed$'"
+
+  create-capi-api-provider:
+    cmds:
+      - task: create-capi-api-provider-workspace
+      - task: apply-capi-api-exports
+
+  create-capi-api-provider-workspace:
+    internal: true
+    env:
+      KUBECONFIG:
+        sh: echo "${KCP_ADMIN_KUBECONFIG}"
+    cmds:
+      - kubectl ws :root
+      - kubectl create workspace capi-api-provider
+    status:
+      - kubectl ws :root && kubectl get workspaces capi-api-provider &>/dev/null
+
+  apply-capi-api-exports:
+    internal: true
+    env:
+      KUBECONFIG:
+        sh: echo "${KCP_ADMIN_KUBECONFIG}"
+    cmds:
+      - kubectl ws :root:capi-api-provider
+      - kubectl apply --server-side --filename="{{.CAPI_APIEXPORTS_DIR}}"
+    sources:
+      - "{{.CAPI_APIEXPORTS_DIR}}/*.yaml"
+    status:
+      - kubectl ws :root:capi-api-provider && kubectl get apiexports cluster.x-k8s.io &>/dev/null
+
+  create-capi-api-consumer:
+    cmds:
+      - task: create-capi-api-consumer-workspace
+      - task: apply-capi-api-consumer
+
+  create-capi-api-consumer-workspace:
+    internal: true
+    env:
+      KUBECONFIG:
+        sh: echo "${KCP_ADMIN_KUBECONFIG}"
+    cmds:
+      - kubectl ws :root
+      - kubectl create workspace capi-api-consumer
+    status:
+      - kubectl ws :root && kubectl get workspaces capi-api-consumer &>/dev/null
+
+  apply-capi-api-consumer:
+    internal: true
+    env:
+      KUBECONFIG:
+        sh: echo "${KCP_ADMIN_KUBECONFIG}"
+    cmds:
+      - kubectl ws :root:capi-api-consumer
+      - kubectl kcp bind apiexport root:capi-api-provider:cluster.x-k8s.io
+    status:
+      - kubectl ws :root:capi-api-consumer && kubectl get apibindings cluster.x-k8s.io &>/dev/null
