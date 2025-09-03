@@ -12,12 +12,12 @@
         packages = rec {
           kubectl-kcp = buildGoLatestModule rec {
             name = "kubectl-kcp";
-            version = "0.27.1";
+            version = "0.28.1";
             src = fetchFromGitHub {
               owner = "kcp-dev";
               repo = "kcp";
               rev = "v${version}";
-              hash = "sha256-X4zSuul/dFvnv3ayrUewngZgt39bxCd2ZxTObR0QY5s=";
+              hash = "sha256-GwfrFaGLrfUTxLoacGCHHzJ41+tA7flb4wvjWJntj+g=";
             };
             doCheck = false;
             modRoot = "./cli";
@@ -26,24 +26,24 @@
               "cmd/kubectl-ws"
               "cmd/kubectl-kcp"
             ];
-            vendorHash = "sha256-J7D8CkMU0trClW+/kusRJxn1GAbXaJg64ufz9HyZCec=";
+            vendorHash = "sha256-WBq0Lnr1D2GFQYiXHoTma7Tno/x8qSLIAlqXlEFx0ek=";
           };
 
           kcp-apigen = buildGoLatestModule rec {
             name = "kcp-apigen";
-            version = "0.27.1";
+            version = "0.28.1";
             src = fetchFromGitHub {
               owner = "kcp-dev";
               repo = "kcp";
               rev = "v${version}";
-              hash = "sha256-X4zSuul/dFvnv3ayrUewngZgt39bxCd2ZxTObR0QY5s=";
+              hash = "sha256-GwfrFaGLrfUTxLoacGCHHzJ41+tA7flb4wvjWJntj+g=";
             };
             doCheck = false;
             modRoot = "./sdk";
             subPackages = [
               "cmd/apigen"
             ];
-            vendorHash = "sha256-1sLjLhGGHRclEN0otiBTo7mIB0IEWQddwi6BG6/6wTw=";
+            vendorHash = "sha256-U6LJc2kYhObO0onGqbbrGwN2Ns2MYsz34+G5ncwahC4=";
           };
         };
 
