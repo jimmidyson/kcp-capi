@@ -8,6 +8,11 @@ nodes:
   extraMounts:
   - hostPath: /var/run/docker.sock
     containerPath: /var/run/docker.sock
+  kubeadmConfigPatches:
+  - |
+    kind: KubeletConfiguration
+    serializeImagePulls: false
+    maxParallelImagePulls: 20
 - role: worker
   extraMounts:
   - hostPath: /var/run/docker.sock
@@ -19,3 +24,8 @@ nodes:
   - containerPort: 8443
     hostPort: 8443
     listenAddress: "0.0.0.0"
+containerdConfigPatches:
+- |-
+  [plugins."io.containerd.grpc.v1.cri".registry.configs."registry-1.docker.io".auth]
+    username = "${DOCKERHUB_USERNAME:-}"
+    password = "${DOCKERHUB_PASSWORD:-}"

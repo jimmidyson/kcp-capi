@@ -1,16 +1,11 @@
 {
   "yaml.schemas": {
     "https://taskfile.dev/schema.json": [
-      "tasks/git.yaml",
-      "tasks/build.yaml",
-      "tasks/go.yaml",
-      "tasks/pre-commit.yaml",
-      "tasks/test.yaml",
       "tasks/kind.yaml",
       "tasks/kcp.yaml",
       "tasks/cert-manager.yaml",
       "tasks/reflector.yaml",
-      "tasks/apis.yaml"
+      "tasks/capi.yaml"
     ]
   }
 }

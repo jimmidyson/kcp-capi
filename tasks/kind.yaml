@@ -21,7 +21,7 @@ tasks:
         sh: crane ls ghcr.io/mesosphere/kind-node | grep --invert-match 64 | sort --reverse --version-sort | head -1
     cmds:
       - kind create cluster --name '{{.KIND_CLUSTER_NAME}}'
-        --image 'ghcr.io/mesosphere/kind-node:{{.K8S_VERSION}}' --config=config/kind-config.yaml
+        --image 'ghcr.io/mesosphere/kind-node:{{.K8S_VERSION}}' --config=<(envsubst -i config/kind-config.yaml)
     status:
       - kind get clusters | grep --quiet '^{{.KIND_CLUSTER_NAME}}$'
 

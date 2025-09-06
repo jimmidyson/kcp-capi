@@ -21,6 +21,8 @@ kcp:
           - "kcp.127.0.0.1.sslip.io"
   homeWorkspaces:
     enabled: true
+  # extraFlags:
+  #   - --feature-gates=EnableDeprecatedAPIExportVirtualWorkspacesUrls=true
 kcpFrontProxy:
   service:
     clusterIP: "10.96.0.100"

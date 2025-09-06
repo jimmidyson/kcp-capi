@@ -5,16 +5,18 @@ set:
   - nounset
   - pipefail
 
+output: 'group'
+
 includes:
   cert-manager: tasks/cert-manager.yaml
   kcp: tasks/kcp.yaml
   kind: tasks/kind.yaml
   reflector: tasks/reflector.yaml
-  apis: tasks/apis.yaml
+  capi: tasks/capi.yaml
 
 env:
   KUBECONFIG: "{{.KIND_CLUSTER_NAME}}-kind.kubeconfig"
-  KCP_ADMIN_KUBECONFIG: "kcp-admin.kubeconfig"
+  KCP_ADMIN_EXTERNAL_KUBECONFIG: "kcp-admin.kubeconfig"
 
 tasks:
   run-demo:
@@ -22,13 +24,15 @@ tasks:
     cmds:
       - task: kind:create
       - task: cert-manager:deploy
-      - task: reflector:deploy
-      - task: kcp:deploy
-      - task: apis:capi-apigen
-      - task: kcp:create-capi-api-provider
-      - task: kcp:create-capi-api-consumer
+      - task: deploy-required-apps
+      - task: cert-manager:publish-api
+
+  deploy-required-apps:
+    deps: [reflector:deploy, capi:init, kcp:deploy]
+    internal: true
 
   cleanup:
     desc: Cleanup the demo environment
     cmds:
+      - rm -f "${KCP_ADMIN_EXTERNAL_KUBECONFIG}"
       - task: kind:delete

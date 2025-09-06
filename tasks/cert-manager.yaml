@@ -1,4 +1,7 @@
-version: 3
+# Copyright 2025 Nutanix. All rights reserved.
+# SPDX-License-Identifier: Apache-2.0
+
+version: '3'
 
 tasks:
   deploy:
@@ -12,3 +15,132 @@ tasks:
       - config/cert-manager-values.yaml
     status:
       - "helm status --namespace=cert-manager cert-manager | grep --quiet '^STATUS: deployed$'"
+
+  publish-api:
+    cmds:
+      - task: create-provider-workspace
+      - task: create-apiexport
+      - task: create-apibinding
+      - task: deploy-api-syncagent
+      - task: create-api-syncagent-service-cluster-rbac
+      - task: create-api-syncagent-kcp-rbac
+      - task: publish-resources
+
+  create-provider-workspace:
+    internal: true
+    env:
+      KUBECONFIG:
+        sh: echo "${KCP_ADMIN_EXTERNAL_KUBECONFIG}"
+    cmds:
+      - kubectl ws :root
+      - kubectl create workspace cert-manager-provider
+    status:
+      - kubectl ws :root && kubectl get workspaces cert-manager-provider &>/dev/null
+
+  create-apiexport:
+    internal: true
+    env:
+      KUBECONFIG:
+        sh: echo "${KCP_ADMIN_EXTERNAL_KUBECONFIG}"
+    cmds:
+      - kubectl ws :root:cert-manager-provider
+      - defer: kubectl ws :root
+      - cmd: |
+          cat <<EOF | kubectl apply --server-side -f -
+          apiVersion: apis.kcp.io/v1alpha1
+          kind: APIExport
+          metadata:
+            name: cert-manager.io
+          spec: {}
+          EOF
+    status:
+      - kubectl ws :root:cert-manager-provider && kubectl get apiexport cert-manager.io &>/dev/null
+
+  create-apibinding:
+    internal: true
+    env:
+      KUBECONFIG:
+        sh: echo "${KCP_ADMIN_EXTERNAL_KUBECONFIG}"
+    cmds:
+      - kubectl ws :root:cert-manager-provider
+      - defer: kubectl ws :root
+      - cmd: |
+          cat <<EOF | kubectl apply --server-side -f -
+          apiVersion: apis.kcp.io/v1alpha1
+          kind: APIBinding
+          metadata:
+            name: cert-manager.io
+          spec:
+            reference:
+              export:
+                name: cert-manager.io
+          EOF
+    status:
+      - kubectl ws :root:cert-manager-provider && kubectl get apibinding cert-manager.io &>/dev/null
+
+  deploy-api-syncagent:
+    vars:
+      CM_KUBECONFIG_TEMP_DIR:
+        sh: mktemp -d .cm-kubeconfig.XXXXXX
+    cmds:
+      - defer: rm -rf "{{.CM_KUBECONFIG_TEMP_DIR}}"
+      - kubectl get secrets --namespace=kcp-system kcp-internal-admin-kubeconfig -ojson |
+          jq --raw-output '.data.kubeconfig | @base64d' >"{{.CM_KUBECONFIG_TEMP_DIR}}/kcp-syncagent.kubeconfig"
+      - kubectl get secrets -n kcp-system kcp-ca -ojson |
+          jq --raw-output '.data["tls.crt"] | @base64d' >"{{.CM_KUBECONFIG_TEMP_DIR}}/ca.crt"
+      - kubectl get secrets -n kcp-system kcp-internal-admin-kubeconfig-cert -ojson |
+          jq --raw-output '.data["tls.crt"] | @base64d' >"{{.CM_KUBECONFIG_TEMP_DIR}}/internal-admin.crt"
+      - kubectl get secrets -n kcp-system kcp-internal-admin-kubeconfig-cert -ojson |
+          jq --raw-output '.data["tls.key"] | @base64d' >"{{.CM_KUBECONFIG_TEMP_DIR}}/internal-admin.key"
+      - kubectl --kubeconfig="{{.CM_KUBECONFIG_TEMP_DIR}}/kcp-syncagent.kubeconfig" config set-credentials
+          logical-cluster-admin
+          --token=admin-token
+      - sed -i '/client-\(certificate\|key\)/d' "{{.CM_KUBECONFIG_TEMP_DIR}}/kcp-syncagent.kubeconfig"
+      - cat "{{.CM_KUBECONFIG_TEMP_DIR}}/kcp-syncagent.kubeconfig"
+      - kubectl --kubeconfig="{{.CM_KUBECONFIG_TEMP_DIR}}/kcp-syncagent.kubeconfig" config set-cluster
+          logical-cluster:admin
+          --certificate-authority="{{.CM_KUBECONFIG_TEMP_DIR}}/ca.crt"
+          --server="https://kcp:6443/clusters/root:cert-manager-provider"
+          --embed-certs=true
+      - kubectl create secret generic certmanager-syncagent-kubeconfig
+          --namespace=kcp-system
+          --from-file kubeconfig="{{.CM_KUBECONFIG_TEMP_DIR}}/kcp-syncagent.kubeconfig" --dry-run=client -o yaml |
+          kubectl apply --namespace=kcp-system --server-side -f -
+      - helm upgrade --install cert-manager-api-syncagent api-syncagent --repo=https://kcp-dev.github.io/helm-charts
+          --namespace=kcp-system
+          --values=config/cert-manager-api-syncagent-values.yaml
+          --post-renderer=gojq
+          --post-renderer-args=--yaml-input --post-renderer-args=--yaml-output
+          --post-renderer-args=--from-file --post-renderer-args=config/cert-manager-api-syncagent-postrenderer-filter.txt
+          --wait --wait-for-jobs
+          --hide-notes
+    sources:
+      - config/cert-manager-api-syncagent-values.yaml
+    status:
+      - "helm status --namespace=kcp-system cert-manager-api-syncagent | grep --quiet '^STATUS: deployed$'"
+
+  create-api-syncagent-service-cluster-rbac:
+    cmds:
+      - kubectl apply --namespace=kcp-system --server-side --filename=config/cert-manager-api-syncagent-rbac.yaml
+    status:
+      - kubectl get clusterrole --namespace=kcp-system api-syncagent:cert-manager &>/dev/null
+      - kubectl get clusterrolebinding --namespace=kcp-system api-syncagent:cert-manager &>/dev/null
+
+  create-api-syncagent-kcp-rbac:
+    env:
+      KUBECONFIG:
+        sh: echo "${KCP_ADMIN_EXTERNAL_KUBECONFIG}"
+    cmds:
+      - kubectl ws :root:cert-manager-provider
+      - defer: kubectl ws :root
+      - kubectl apply --server-side --filename=config/cert-manager-api-syncagent-kcp-rbac.yaml
+    status:
+      - kubectl ws :root:cert-manager-provider && kubectl get clusterrole api-syncagent-cert-manager &>/dev/null
+      - kubectl ws :root:cert-manager-provider && kubectl get clusterrolebinding api-syncagent-cert-manager:system &>/dev/null
+      - kubectl ws :root:cert-manager-provider && kubectl get clusterrolebinding api-syncagent-cert-manager:access &>/dev/null
+
+  publish-resources:
+    cmds:
+      - kubectl apply --server-side --filename=config/cert-manager-published-resources.yaml
+    status:
+      - kubectl get publishedresource publish-certmanager-certs &>/dev/null

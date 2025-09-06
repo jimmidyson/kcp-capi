@@ -1,4 +1,7 @@
-version: 3
+# Copyright 2025 Nutanix. All rights reserved.
+# SPDX-License-Identifier: Apache-2.0
+
+version: '3'
 
 tasks:
   deploy:
@@ -11,80 +14,40 @@ tasks:
     internal: true
     cmds:
       - helm upgrade --install kcp kcp --repo=https://kcp-dev.github.io/helm-charts
-          --namespace=kcp --create-namespace
+          --version=0.10.2
+          --namespace=kcp-system --create-namespace
           --values=config/kcp-values.yaml
           --wait --wait-for-jobs
+          --hide-notes
     sources:
       - config/kcp-values.yaml
     status:
-      - "helm status --namespace=kcp kcp | grep --quiet '^STATUS: deployed$'"
+      - "helm status --namespace=kcp-system kcp | grep --quiet '^STATUS: deployed$'"
 
   generate-kcp-admin-kubeconfig:
     desc: Generate KCP admin kubeconfig
-    env:
-      external_hostname:
-        sh: helm get values -n kcp kcp -o yaml | yq '.externalHostname'
+    vars:
+      KCP_KUBECONFIG_TEMP_DIR:
+        sh: mktemp -d .kcp-kubeconfig.XXXXXX
     cmds:
-      - envsubst --no-unset --no-digit --no-empty -i config/kcp-admin-kubeconfig.tmpl -o kcp-admin.kubeconfig
+      - defer: rm -rf "{{.KCP_KUBECONFIG_TEMP_DIR}}"
+      - kubectl get secrets --namespace=kcp-system kcp-external-admin-kubeconfig -ojson |
+          jq --raw-output '.data.kubeconfig | @base64d' >"{{.KCP_KUBECONFIG_TEMP_DIR}}/${KCP_ADMIN_EXTERNAL_KUBECONFIG}"
+      - kubectl get secrets -n kcp-system kcp-ca -ojson |
+          jq --raw-output '.data["tls.crt"] | @base64d' >"{{.KCP_KUBECONFIG_TEMP_DIR}}/ca.crt"
+      - kubectl --kubeconfig="{{.KCP_KUBECONFIG_TEMP_DIR}}/${KCP_ADMIN_EXTERNAL_KUBECONFIG}" config set-credentials
+          external-logical-cluster-admin
+          --token=admin-token
+      - sed -i '/client-\(certificate\|key\)/d' "{{.KCP_KUBECONFIG_TEMP_DIR}}/${KCP_ADMIN_EXTERNAL_KUBECONFIG}"
+      - kubectl --kubeconfig="{{.KCP_KUBECONFIG_TEMP_DIR}}/${KCP_ADMIN_EXTERNAL_KUBECONFIG}" config set-cluster
+          external-logical-cluster-admin
+          --certificate-authority="{{.KCP_KUBECONFIG_TEMP_DIR}}/ca.crt"
+          --server="https://kcp.127.0.0.1.sslip.io:8443/clusters/root"
+          --embed-certs=true
+      - mv "{{.KCP_KUBECONFIG_TEMP_DIR}}/${KCP_ADMIN_EXTERNAL_KUBECONFIG}" "${KCP_ADMIN_EXTERNAL_KUBECONFIG}"
     sources:
-      - config/kcp-admin-kubeconfig.tmpl
+      - config/kcp-values.yaml
     generates:
       - kcp-admin.kubeconfig
     preconditions:
-      - "helm status --namespace=kcp kcp | grep --quiet '^STATUS: deployed$'"
-
-  create-capi-api-provider:
-    cmds:
-      - task: create-capi-api-provider-workspace
-      - task: apply-capi-api-exports
-
-  create-capi-api-provider-workspace:
-    internal: true
-    env:
-      KUBECONFIG:
-        sh: echo "${KCP_ADMIN_KUBECONFIG}"
-    cmds:
-      - kubectl ws :root
-      - kubectl create workspace capi-api-provider
-    status:
-      - kubectl ws :root && kubectl get workspaces capi-api-provider &>/dev/null
-
-  apply-capi-api-exports:
-    internal: true
-    env:
-      KUBECONFIG:
-        sh: echo "${KCP_ADMIN_KUBECONFIG}"
-    cmds:
-      - kubectl ws :root:capi-api-provider
-      - kubectl apply --server-side --filename="{{.CAPI_APIEXPORTS_DIR}}"
-    sources:
-      - "{{.CAPI_APIEXPORTS_DIR}}/*.yaml"
-    status:
-      - kubectl ws :root:capi-api-provider && kubectl get apiexports cluster.x-k8s.io &>/dev/null
-
-  create-capi-api-consumer:
-    cmds:
-      - task: create-capi-api-consumer-workspace
-      - task: apply-capi-api-consumer
-
-  create-capi-api-consumer-workspace:
-    internal: true
-    env:
-      KUBECONFIG:
-        sh: echo "${KCP_ADMIN_KUBECONFIG}"
-    cmds:
-      - kubectl ws :root
-      - kubectl create workspace capi-api-consumer
-    status:
-      - kubectl ws :root && kubectl get workspaces capi-api-consumer &>/dev/null
-
-  apply-capi-api-consumer:
-    internal: true
-    env:
-      KUBECONFIG:
-        sh: echo "${KCP_ADMIN_KUBECONFIG}"
-    cmds:
-      - kubectl ws :root:capi-api-consumer
-      - kubectl kcp bind apiexport root:capi-api-provider:cluster.x-k8s.io
-    status:
-      - kubectl ws :root:capi-api-consumer && kubectl get apibindings cluster.x-k8s.io &>/dev/null
+      - "helm status --namespace=kcp-system kcp | grep --quiet '^STATUS: deployed$'"

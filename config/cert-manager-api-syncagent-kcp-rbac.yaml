@@ -1,0 +1,73 @@
+# Copyright 2025 Nutanix. All rights reserved.
+# SPDX-License-Identifier: Apache-2.0
+
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: api-syncagent-cert-manager
+rules:
+  # get the LogicalCluster
+  - apiGroups:
+      - core.kcp.io
+    resources:
+      - logicalclusters
+    resourceNames:
+      - cluster
+    verbs:
+      - get
+  # manage its APIExport
+  - apiGroups:
+      - apis.kcp.io
+    resources:
+      - apiexports
+    resourceNames:
+      - cert-manager.io
+    verbs:
+      - get
+      - list
+      - watch
+      - patch
+      - update
+  # manage APIResourceSchemas
+  - apiGroups:
+      - apis.kcp.io
+    resources:
+      - apiresourceschemas
+    verbs:
+      - get
+      - list
+      - watch
+      - create
+  # access the virtual workspace
+  - apiGroups:
+      - apis.kcp.io
+    resources:
+      - apiexports/content
+    resourceNames:
+      - cert-manager.io
+    verbs:
+      - '*'
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: api-syncagent-cert-manager:system
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: api-syncagent-cert-manager
+subjects:
+  - kind: User
+    name: admin
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: api-syncagent-cert-manager:access
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: system:kcp:workspace:access
+subjects:
+  - kind: User
+    name: admin

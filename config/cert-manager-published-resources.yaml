@@ -1,0 +1,44 @@
+# Copyright 2025 Nutanix. All rights reserved.
+# SPDX-License-Identifier: Apache-2.0
+
+apiVersion: syncagent.kcp.io/v1alpha1
+kind: PublishedResource
+metadata:
+  name: publish-certmanager-certs
+spec:
+  resource:
+    kind: Certificate
+    apiGroup: cert-manager.io
+    versions: [v1]
+
+  related:
+    - # unique name for this related resource. The name must be unique within
+      # one PublishedResource and is the key by which consumers (end users)
+      # can identify and consume the related resource. Common names are
+      # "connection-details" or "credentials".
+      identifier: tls-secret
+
+      # "service" or "kcp"
+      origin: service
+
+      # for now, only "Secret" and "ConfigMap" are supported;
+      # there is no GVK projection for related resources
+      kind: Secret
+
+      # configure where in the parent object we can find the child object
+      object:
+        # This template is evaluated in both the local and remote objects, to figure out
+        # the local and remote names for the related object. This saves us from having
+        # to remember mutated fields before their mutation (similar to the last-known
+        # annotation).
+        template:
+          template: '{{ .Object.spec.secretName }}'
+
+        # namespace part is optional; if not configured,
+        # Sync Agent assumes the same namespace as the owning resource
+        # namespace:
+        #   reference:
+        #     path: spec.secretName
+        #     regex:
+        #       pattern: '...'
+        #       replacement: '...'
