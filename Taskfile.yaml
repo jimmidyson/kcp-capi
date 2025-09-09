@@ -21,11 +21,19 @@ env:
 tasks:
   run-demo:
     desc: Run the demo
+    vars:
+      CONSUMER_WORKSPACE: tenant-a
     cmds:
       - task: kind:create
       - task: cert-manager:deploy
       - task: deploy-required-apps
       - task: cert-manager:publish-api
+      - task: kcp:create-workspace
+        vars:
+          WORKSPACE: '{{.CONSUMER_WORKSPACE}}'
+      - task: cert-manager:create-apibinding
+        vars:
+          WORKSPACE: '{{.CONSUMER_WORKSPACE}}'
 
   deploy-required-apps:
     deps: [reflector:deploy, capi:init, kcp:deploy]

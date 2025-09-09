@@ -1,0 +1,26 @@
+# Copyright 2025 Nutanix. All rights reserved.
+# SPDX-License-Identifier: Apache-2.0
+
+apiVersion: syncagent.kcp.io/v1alpha1
+kind: PublishedResource
+metadata:
+  name: publish-certmanager-certs
+spec:
+  resource:
+    kind: Certificate
+    apiGroup: cert-manager.io
+    versions: [v1]
+
+  mutation:
+    spec:
+      - template:
+          path: spec.secretName
+          template: '{{ .RemoteObject.metadata.name }}-secret'
+
+  related:
+    - identifier: tls-secret
+      origin: service
+      kind: Secret
+      object:
+        template:
+          template: '{{ .Object.spec.secretName }}'

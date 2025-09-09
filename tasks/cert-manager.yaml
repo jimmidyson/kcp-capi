@@ -21,6 +21,8 @@ tasks:
       - task: create-provider-workspace
       - task: create-apiexport
       - task: create-apibinding
+        vars:
+          WORKSPACE: cert-manager-provider
       - task: deploy-api-syncagent
       - task: create-api-syncagent-service-cluster-rbac
       - task: create-api-syncagent-kcp-rbac
@@ -45,38 +47,21 @@ tasks:
     cmds:
       - kubectl ws :root:cert-manager-provider
       - defer: kubectl ws :root
-      - cmd: |
-          cat <<EOF | kubectl apply --server-side -f -
-          apiVersion: apis.kcp.io/v1alpha1
-          kind: APIExport
-          metadata:
-            name: cert-manager.io
-          spec: {}
-          EOF
+      - kubectl apply --server-side -f config/cert-manager-apiexport.yaml
     status:
       - kubectl ws :root:cert-manager-provider && kubectl get apiexport cert-manager.io &>/dev/null
 
   create-apibinding:
-    internal: true
+    desc: Create APIBinding for cert-manager.io
     env:
       KUBECONFIG:
         sh: echo "${KCP_ADMIN_EXTERNAL_KUBECONFIG}"
     cmds:
-      - kubectl ws :root:cert-manager-provider
+      - kubectl ws ':root:{{.WORKSPACE}}'
       - defer: kubectl ws :root
-      - cmd: |
-          cat <<EOF | kubectl apply --server-side -f -
-          apiVersion: apis.kcp.io/v1alpha1
-          kind: APIBinding
-          metadata:
-            name: cert-manager.io
-          spec:
-            reference:
-              export:
-                name: cert-manager.io
-          EOF
+      - kubectl apply --server-side -f config/cert-manager-apibinding.yaml
     status:
-      - kubectl ws :root:cert-manager-provider && kubectl get apibinding cert-manager.io &>/dev/null
+      - kubectl ws ':root:{{.WORKSPACE}}' && kubectl get apibinding cert-manager.io &>/dev/null
 
   deploy-api-syncagent:
     vars:
@@ -141,6 +126,6 @@ tasks:
 
   publish-resources:
     cmds:
-      - kubectl apply --server-side --filename=config/cert-manager-published-resources.yaml
+      - kubectl apply --server-side --filename=config/cert-manager-published-resources-certs.yaml
     status:
       - kubectl get publishedresource publish-certmanager-certs &>/dev/null
